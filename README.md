@@ -1,165 +1,124 @@
-# SQL Data Cleaning & Data Modeling Project (Snowflake)
+# End-to-End SQL Data Cleaning & Star Schema Project (Snowflake)
 
-## Project Overview
+## Project Objective
 
-This project demonstrates an end-to-end SQL data cleaning and data modeling workflow using messy retail sales data in Snowflake.
+Design and implement a production-style data pipeline to clean, transform, and model messy retail sales data using SQL and Snowflake.
 
-The pipeline includes:
+This project follows a layered architecture:
+Raw Layer → Staging Layer → Analytics Layer (Star Schema)
 
-* Data ingestion
-* Data profiling
-* Data cleaning & standardization
+---
+
+## Tools & Technologies
+
+* SQL (Snowflake)
+* Snowflake Data Warehouse
+* GitHub (Version Control)
+* Excel (Raw Dataset)
+
+---
+
+## Data Architecture (Enterprise Design)
+
+### Raw Layer
+
+* Stores original messy dataset (untouched)
+* Table: `raw_layer.raw_data`
+
+### Staging Layer
+
+* Data cleaning and transformation
+* Null handling
+* Standardization
 * Deduplication
-* Star schema modeling (Fact & Dimension tables)
+* Tables:
+
+  * `cleaned_data`
+  * `cleaned_deduplicated`
+
+### Analytics Layer
+
+* Star Schema Modeling
+* Surrogate Keys
+* Dimension & Fact Tables
+* Tables:
+
+  * `dim_customer`
+  * `dim_product`
+  * `dim_region`
+  * `fact_sales_transaction`
 
 ---
 
-## Objective
+## Data Profiling Insights
 
-Transform messy raw retail data into a clean, analysis-ready dataset and design a scalable data model suitable for BI and analytics.
+* Multiple date formats detected
+* NULL values in customer_id & customer_name
+* Invalid text values in discount column
+* Negative quantities present
+* Inconsistent total_amount values
+
+Stakeholder-aligned approach used: No raw rows deleted to preserve auditability.
 
 ---
 
-## Tools & Technologies Used
+## Data Cleaning Steps Performed
 
-* SQL (Snowflake SQL)
-* Snowflake Cloud Data Warehouse
-* GitHub (Version Control & Documentation)
-* Excel (Raw Data Simulation)
+* Standardized multiple date formats using TRY_TO_DATE()
+* Replaced NULL/blank customer fields with 'Unknown'
+* Standardized region names using INITCAP()
+* Cleaned discount using TRY_TO_NUMBER()
+* Fixed negative quantities using ABS()
+* Recalculated total_amount using business logic
+* Removed duplicates using ROW_NUMBER()
+
+---
+
+## Data Modeling (Star Schema)
+
+Fact Table Grain: One row per order_id per product (transaction level)
+
+### Dimension Tables:
+
+* dim_customer (SCD-ready with surrogate key)
+* dim_product
+* dim_region
+
+### Fact Table:
+
+* fact_sales_transaction (linked via surrogate keys)
 
 ---
 
 ## Project Structure
 
-```
-sql-data-cleaning/
-│
-├── data/
-│   ├── messy_retail_data_3000_rows.xlsx   # Raw messy dataset
-│   └── raw_data.csv                       # Converted CSV for Snowflake
-│
-├── sql/
-│   └── data_cleaning_queries.sql          # Profiling, Cleaning, Deduplication, Modeling
-│
-└── README.md                              # Project Documentation
-```
+sql/
+
+* 01_data_profiling.sql
+* 02_data_cleaning.sql
+* 03_deduplication.sql
+* 04_star_schema.sql
+
+data/
+
+* messy_retail_data_3000_rows.xlsx
+* raw_data.csv
 
 ---
 
-## 🔍 Step 1: Data Profiling
+## Key Learnings
 
-Performed initial analysis to identify data quality issues:
-
-* Multiple date formats
-* NULL customer IDs and names
-* Inconsistent region values (north, NORTH, South)
-* Negative quantities
-* Text values in discount column (e.g., 'abc')
-* Missing prices and total_amount
-* Duplicate order records
-
-## Data Cleaning Strategy (Business-Aligned)
-
-After performing data profiling, key data quality issues were identified:
-- NULL customer IDs and names
-- Invalid discount values (text)
-- Multiple date formats
-- Negative quantities
-
-Instead of deleting rows, stakeholder-aligned cleaning rules were applied:
-- NULL/blank customer fields replaced with 'Unknown'
-- Invalid discounts converted to NULL
-- Negative quantities standardized using ABS()
-- Dates standardized using TRY_TO_DATE()
-- Duplicate records removed using ROW_NUMBER()
-
-No raw records were deleted to preserve data completeness and auditability.
-
-## Step 2: Data Cleaning & Standardization
-
-Key transformations applied:
-
-* Standardized date formats using TRY_TO_DATE + COALESCE
-* Trimmed and handled blank strings using NULLIF + TRIM
-* Replaced missing customer values with 'Unknown'
-* Standardized region names using INITCAP()
-* Converted negative quantities using ABS()
-* Cleaned discount using TRY_CAST()
-* Recalculated total_amount using business logic:
-
-  ```
-  total_amount = quantity * price * (1 - discount)
-  ```
+* End-to-end data pipeline design in Snowflake
+* Data profiling & stakeholder-driven cleaning
+* Handling NULLs and messy real-world data
+* Deduplication using window functions
+* Star schema modeling with surrogate keys
+* Enterprise data warehouse architecture
 
 ---
 
-## 🧾 Step 3: Deduplication Logic
+## 🚀 Future Enhancements
 
-Duplicates were removed using enterprise-grade logic:
-
-* Business Key: order_id
-* Rule: Keep latest valid record per order
-* Technique: ROW_NUMBER() with ORDER BY order_date DESC and NULL handling
-
----
-
-## Step 4: Data Modeling (Star Schema)
-
-Designed a scalable star schema for analytics:
-
-### Fact Table:
-
-* fact_sales (Transactional data)
-
-### Dimension Tables:
-
-* dim_customer (SCD Type 2 Ready with surrogate keys)
-* dim_product
-* dim_region
-* dim_date
-
-Why surrogate keys?
-
-* Future-proof for Slowly Changing Dimensions (SCD)
-* Better performance in joins
-* Industry best practice
-
----
-
-## 📊 Data Quality Observations
-
-| Column       | Issues Found                 |
-| ------------ | ---------------------------- |
-| order_date   | NULL values, invalid formats |
-| customer_id  | NULL & blank values          |
-| discount     | Text + NULL values           |
-| quantity     | Negative values              |
-| total_amount | Incorrect & missing values   |
-
----
-
-## 🧠 Key Learnings
-
-* Real-world data is always messy and incomplete
-* Importance of stakeholder decisions for NULL handling
-* Using TRY_CAST and TRY_TO_DATE in Snowflake
-* Enterprise deduplication using ROW_NUMBER()
-* Designing star schema with surrogate keys
-* End-to-end data pipeline thinking (not just cleaning)
-
----
-
-## 🚀 Future Improvements
-
-* Add automated data quality checks
-* Implement SCD Type 2 for customer dimension
-* Build Power BI / Looker dashboard on fact table
-* Add data validation tests (SQL checks)
-
----
-
-## 👤 Author
-
-Jeeri Chaitanya
-Data Analyst | SQL | Snowflake | Data Modeling
-
+* Implement SCD Type 2 for dim_customer
+* Build Power BI dashboard on fact table
+* Automate pipeline using Snowflake Tasks
